@@ -6,7 +6,8 @@
 #include <BleMouse.h>
 #include <BleConnectionStatus.h>
 
-const int potPin = 34;                // Potentiometer is connected to GPIO 34 (Analog ADC1_CH6)
+const int potPinX = 34;                // Potentiometer is connected to GPIO 34 (Analog ADC1_CH6)
+const int potPinY = 35;                // Potentiometer is connected to GPIO 34 (Analog ADC1_CH6)
 const int numberOfPotSamples = 5;     // Number of pot samples to take (to smooth the values)
 const int delayBetweenSamples = 5;    // Delay in milliseconds between pot samples
 const int delayBetweenHIDReports = 100; // Additional delay in milliseconds between HID reports
@@ -59,32 +60,49 @@ void loop()
         delay(10); // bluetooth stack will go into congestion, if too many packets are sent
     }
 */
-    int potValues[numberOfPotSamples]; // Array to store pot readings
-    int potValue = 0;                  // Variable to store calculated pot reading average
+    int potValuesX[numberOfPotSamples]; // Array to store pot readings
+    int potValueX = 0;                  // Variable to store calculated pot reading average
+    int potValuesY[numberOfPotSamples]; // Array to store pot readings
+    int potValueY = 0;                  // Variable to store calculated pot reading average
 
     // Populate readings
     for (int i = 0; i < numberOfPotSamples; i++)
     {
-        potValues[i] = analogRead(potPin);
-        potValue += potValues[i];
+        potValuesX[i] = analogRead(potPinX);
+        potValueX += potValuesX[i];
+        potValuesY[i] = analogRead(potPinY);
+        potValueY += potValuesY[i];
         delay(delayBetweenSamples);
     }
 
     // Calculate the average
-    potValue = potValue / numberOfPotSamples;
+    potValueX = potValueX / numberOfPotSamples;
+    potValueY = potValueY / numberOfPotSamples;
 
     // Map analog reading from 0 ~ 4095 to 32737 ~ 0 for use as an axis reading
-    int offSetX = 1000;
-    int adjustedValueX = map(potValue, 0, 4095, 32737, 0) - offSetX;
-    int moveX = (32737 / 2 - adjustedValueX);
-    if (abs(moveX) < 4000) {
+    int offSet = 1000;
+    int deadZone = 4000;
+    int reductionFactor = 1200;
+    int maxValue = 32737;
+
+    // Map analog reading from 0 ~ 4095 to 32737 ~ 0 for use as an axis reading
+    int adjustedValueX = map(potValueX, 0, 4095, maxValue, 0) - offSet;
+    int moveX = (maxValue / 2 - adjustedValueX);
+    if (abs(moveX) < deadZone) {
         moveX = 0;
     }
-    moveX = moveX / 1200;
+    moveX = moveX / reductionFactor;
+
+    int adjustedValueY = map(potValueY, 0, 4095, maxValue, 0) - offSet;
+    int moveY = (maxValue / 2 - adjustedValueY);
+    if (abs(moveY) < deadZone) {
+        moveY = 0;
+    }
+    moveY = moveY / reductionFactor;
 
     if (bleMouse.isConnected()) {
       //  Serial.println("Scroll Down");
-        bleMouse.move(moveX, -1, 0);
+        bleMouse.move(moveX, moveY, 0);
       //  Serial.print("moveX: ");
      //   Serial.print(moveX);
     }
