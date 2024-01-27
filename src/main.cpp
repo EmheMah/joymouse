@@ -1,44 +1,22 @@
-#include <BLEDevice.h>
-#include <BLEUtils.h>
-#include <BLEServer.h>
-#include <BLE2902.h>
+
 #include <Arduino.h>
 #include <SPI.h>
 #include <Wire.h>
 
+#include <BleMouse.h>
+#include <BleConnectionStatus.h>
+
 const int potPin = 34;                // Potentiometer is connected to GPIO 34 (Analog ADC1_CH6)
 const int numberOfPotSamples = 5;     // Number of pot samples to take (to smooth the values)
-const int delayBetweenSamples = 100;    // Delay in milliseconds between pot samples
-const int delayBetweenHIDReports = 5; // Additional delay in milliseconds between HID reports
+const int delayBetweenSamples = 5;    // Delay in milliseconds between pot samples
+const int delayBetweenHIDReports = 100; // Additional delay in milliseconds between HID reports
 
-BLEServer *pServer = NULL;
-BLECharacteristic *pCharacteristic = NULL;
-bool deviceConnected = false;
-bool oldDeviceConnected = false;
-uint32_t value = 0;
-uint32_t value2 = 0;
-int idx = 0;
-
-#define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
-#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
-
-class MyServerCallbacks : public BLEServerCallbacks
-{
-    void onConnect(BLEServer *pServer)
-    {
-        deviceConnected = true;
-    };
-
-    void onDisconnect(BLEServer *pServer)
-    {
-        deviceConnected = false;
-    }
-};
+BleMouse bleMouse("La manette qui sent drôle", "Emile Maher", 69);
 
 void setup()
 {
-    Serial.begin(115200);
-
+    Serial.begin(9600);
+/*
     // Create the BLE Device
     BLEDevice::init("Joy-Livier");
     // Create the BLE Server
@@ -64,12 +42,15 @@ void setup()
     pAdvertising->setScanResponse(true);
     pAdvertising->setMinPreferred(0x06); // functions that help with iPhone connections issue
     pAdvertising->setMinPreferred(0x12);
-    BLEDevice::startAdvertising();
+    //BLEDevice::startAdvertising();
     Serial.println("Waiting for a client connection to notify...");
+*/
+    bleMouse.begin();
 }
 
 void loop()
 {
+    /*
     // notify changed value
     if (deviceConnected) {
         pCharacteristic->setValue((uint8_t *)&value, 4);
@@ -77,7 +58,7 @@ void loop()
         value++;
         delay(10); // bluetooth stack will go into congestion, if too many packets are sent
     }
-
+*/
     int potValues[numberOfPotSamples]; // Array to store pot readings
     int potValue = 0;                  // Variable to store calculated pot reading average
 
@@ -93,16 +74,27 @@ void loop()
     potValue = potValue / numberOfPotSamples;
 
     // Map analog reading from 0 ~ 4095 to 32737 ~ 0 for use as an axis reading
-    int adjustedValue = map(potValue, 0, 4095, 32737, 0);
+    int offSetX = 1000;
+    int adjustedValueX = map(potValue, 0, 4095, 32737, 0) - offSetX;
+    int moveX = (32737 / 2 - adjustedValueX);
+    if (abs(moveX) < 4000) {
+        moveX = 0;
+    }
+    moveX = moveX / 1200;
 
-    // Update X axis and auto-send report
-    //bleGamepad.setX(adjustedValue);
+    if (bleMouse.isConnected()) {
+      //  Serial.println("Scroll Down");
+        bleMouse.move(moveX, -1, 0);
+      //  Serial.print("moveX: ");
+     //   Serial.print(moveX);
+    }
+/*
     delay(delayBetweenHIDReports);
 
     // The code below (apart from the 2 closing braces) is for pot value degugging, and can be removed
     // Print readings to serial port
     Serial.print("Sent: ");
-    Serial.print(adjustedValue);
+    Serial.print(adjustedValueX);
     Serial.print("\tRaw Avg: ");
     Serial.print(potValue);
     Serial.print("\tRaw: {");
@@ -122,4 +114,5 @@ void loop()
             Serial.print(", ");
         }
     }
+    */
 }
