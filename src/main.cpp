@@ -9,6 +9,8 @@ const int potPinX = 34;                // Potentiometer is connected to GPIO 34 
 const int potPinY = 35;                // Potentiometer is connected to GPIO 34 (Analog ADC1_CH6)
 const int touchButtonPin = 4;     
 const int buttonMode = 666;
+const int button1Pin = 32;             // Button 1 is connected to GPIO 32
+const int button2Pin = 33;             // Button 2 is connected to GPIO 33
 
 const int numberOfPotSamples = 5;     // Number of pot samples to take (to smooth the values)
 const int delayBetweenSamples = 5;    // Delay in milliseconds between pot samples
@@ -27,6 +29,16 @@ void setup() {
 }
 
 void loop() {
+{
+/*
+    // notify changed value
+    if (deviceConnected) {
+        pCharacteristic->setValue((uint8_t *)&value, 4);
+        pCharacteristic->notify();
+        value++;
+        delay(10); // bluetooth stack will go into congestion, if too many packets are sent
+    }
+*/
     int potValuesX[numberOfPotSamples]; // Array to store pot readings
     int potValueX = 0;                  // Variable to store calculated pot reading average
     int potValuesY[numberOfPotSamples]; // Array to store pot readings
@@ -49,7 +61,7 @@ void loop() {
     // Map analog reading from 0 ~ 4095 to 32737 ~ 0 for use as an axis reading
     int offSet = 1000;
     int deadZone = 4000;
-    int reductionFactor = 1200;
+    int reductionFactor = 900;
     int maxValue = 32737;
 
     // Map analog reading from 0 ~ 4095 to 32737 ~ 0 for use as an axis reading
@@ -68,11 +80,12 @@ void loop() {
     moveY = moveY / reductionFactor;
 
     if (bleMouse.isConnected()) {
-        //  Serial.println("Scroll Down");
+        
         bleMouse.move(moveX, moveY, 0);
 
         if (touchRead(touchButtonPin) < 30) {
             bleMouse.press(MOUSE_LEFT);
+            Serial.println("Left button pressed");
         } else {
             bleMouse.release(MOUSE_LEFT);
         }
