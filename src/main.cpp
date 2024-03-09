@@ -57,7 +57,7 @@ void loop()
     // Map analog reading from 0 ~ 4095 to 32737 ~ 0 for use as an axis reading
     int offSet = 1000;
     int deadZone = 4000;
-    int reductionFactor = 900;
+    int reductionFactor = 100;
     int maxValue = 32737;
 
     // Map analog reading from 0 ~ 4095 to 32737 ~ 0 for use as an axis reading
@@ -75,7 +75,11 @@ void loop()
     }
     moveY = moveY / reductionFactor;
 
+    Serial.println("adjustedValueX : " + String(adjustedValueX) + " moveX : " + String(moveX));
+    Serial.println("adjustedValueY : " + String(adjustedValueY) + " moveY : " + String(moveY));
+
     if (bleMouse.isConnected()) {
+        Serial.println("connected");
         bleMouse.move(-moveX, -moveY, 0);
     }
 
