@@ -1,4 +1,3 @@
-
 #include <Arduino.h>
 #include <SPI.h>
 #include <Wire.h>
@@ -8,58 +7,26 @@
 
 const int potPinX = 34;                // Potentiometer is connected to GPIO 34 (Analog ADC1_CH6)
 const int potPinY = 35;                // Potentiometer is connected to GPIO 34 (Analog ADC1_CH6)
+const int touchButtonPin = 4;     
+const int buttonMode = 666;
+
 const int numberOfPotSamples = 5;     // Number of pot samples to take (to smooth the values)
 const int delayBetweenSamples = 5;    // Delay in milliseconds between pot samples
 const int delayBetweenHIDReports = 100; // Additional delay in milliseconds between HID reports
 
 BleMouse bleMouse("La manette qui sent drôle", "Emile Maher", 69);
 
-void setup()
-{
+const String a = "22";
+const String MODES[] = {"MOUSE", "READING"};
+
+int modeJoystick = 0;
+
+void setup() {
     Serial.begin(9600);
-/*
-    // Create the BLE Device
-    BLEDevice::init("Joy-Livier");
-    // Create the BLE Server
-    pServer = BLEDevice::createServer();
-    pServer->setCallbacks(new MyServerCallbacks());
-    // Create the BLE Service
-    BLEService *pService = pServer->createService(SERVICE_UUID);
-    // Create a BLE Characteristic
-    pCharacteristic = pService->createCharacteristic(
-        CHARACTERISTIC_UUID,
-        BLECharacteristic::PROPERTY_READ |
-            BLECharacteristic::PROPERTY_WRITE |
-            BLECharacteristic::PROPERTY_NOTIFY |
-            BLECharacteristic::PROPERTY_INDICATE);
-    // https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.descriptor.gatt.client_characteristic_configuration.xml
-    // Create a BLE Descriptor
-    pCharacteristic->addDescriptor(new BLE2902());
-    // Start the service
-    pService->start();
-    // Start advertising
-    BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
-    pAdvertising->addServiceUUID(SERVICE_UUID);
-    pAdvertising->setScanResponse(true);
-    pAdvertising->setMinPreferred(0x06); // functions that help with iPhone connections issue
-    pAdvertising->setMinPreferred(0x12);
-    //BLEDevice::startAdvertising();
-    Serial.println("Waiting for a client connection to notify...");
-*/
     bleMouse.begin();
 }
 
-void loop()
-{
-    /*
-    // notify changed value
-    if (deviceConnected) {
-        pCharacteristic->setValue((uint8_t *)&value, 4);
-        pCharacteristic->notify();
-        value++;
-        delay(10); // bluetooth stack will go into congestion, if too many packets are sent
-    }
-*/
+void loop() {
     int potValuesX[numberOfPotSamples]; // Array to store pot readings
     int potValueX = 0;                  // Variable to store calculated pot reading average
     int potValuesY[numberOfPotSamples]; // Array to store pot readings
@@ -76,8 +43,8 @@ void loop()
     }
 
     // Calculate the average
-    potValueX = potValueX / numberOfPotSamples;
-    potValueY = potValueY / numberOfPotSamples;
+    potValueX = (potValueX / numberOfPotSamples).toInt();
+    potValueY = (potValueY / numberOfPotSamples).toInt();
 
     // Map analog reading from 0 ~ 4095 to 32737 ~ 0 for use as an axis reading
     int offSet = 1000;
@@ -101,36 +68,20 @@ void loop()
     moveY = moveY / reductionFactor;
 
     if (bleMouse.isConnected()) {
-      //  Serial.println("Scroll Down");
+        //  Serial.println("Scroll Down");
         bleMouse.move(moveX, moveY, 0);
-      //  Serial.print("moveX: ");
-     //   Serial.print(moveX);
-    }
-/*
-    delay(delayBetweenHIDReports);
 
-    // The code below (apart from the 2 closing braces) is for pot value degugging, and can be removed
-    // Print readings to serial port
-    Serial.print("Sent: ");
-    Serial.print(adjustedValueX);
-    Serial.print("\tRaw Avg: ");
-    Serial.print(potValue);
-    Serial.print("\tRaw: {");
-
-    // Iterate through raw pot values, printing them to the serial port
-    for (int i = 0; i < numberOfPotSamples; i++)
-    {
-        Serial.print(potValues[i]);
-
-        // Format the values into a comma seperated list
-        if (i == numberOfPotSamples - 1)
-        {
-            Serial.println("}");
+        if (touchRead(touchButtonPin) < 30) {
+            bleMouse.press(MOUSE_LEFT);
+        } else {
+            bleMouse.release(MOUSE_LEFT);
         }
-        else
-        {
-            Serial.print(", ");
+
+        if (analogRead(buttonMode) < 30) {
+            modeJoystick++;
+            if (modeJoystick == MODES.length() - 1) {
+                modeJoystick = 0;
+            } 
         }
     }
-    */
 }
