@@ -11,7 +11,7 @@
 BleKeyboard bleKeyboard;
 BleMouse bleMouse("La manette qui sent drôle", "Emile Maher", 69);
 
-void handDrawNumberTwo();
+void animateCursor(int mode);
 
 const int potPinX = 34; // Potentiometer is connected to GPIO 34 (Analog ADC1_CH6)
 const int potPinY = 35; // Potentiometer is connected to GPIO 34 (Analog ADC1_CH6)
@@ -42,21 +42,40 @@ void setup()
     bleMouse.begin();
 }
 
-void handDrawNumberTwo() {
-  int radius = 35;
-  int duration = 200;
-  
-  const int steps = 50;  // Number of steps to complete the circle
-  const float angleStep = 2 * PI / steps;  // Angle increment per step
-  const int delayPerStep = duration / steps;  // Delay between each step
+void animateCursor(int mode) {
+    int radius = 10;
+    int duration = 500;
+    int length = 500;
 
-  for (int i = 0; i <= steps; i++) {
-    float angle = i * angleStep;
-    int x = static_cast<int>(radius * cos(angle));
-    int y = static_cast<int>(radius * sin(angle));
-    bleMouse.move(x, y);
-    delay(delayPerStep);
-  }
+    if (mode == 0) {
+        const int steps = 50;  // Number of steps to complete the circle
+        const float angleStep = 2 * PI / steps;  // Angle increment per step
+        const int delayPerStep = duration / steps;  // Delay between each step
+
+        for (int i = 0; i <= steps; i++) {
+            float angle = i * angleStep;
+            int x = static_cast<int>(radius * cos(angle));
+            int y = static_cast<int>(radius * sin(angle));
+            bleMouse.move(x, y);
+            delay(delayPerStep);
+        }
+    } else if (mode == 1) {
+        const int steps = 50;  // Number of steps to complete the line
+        const int delayPerStep = duration / steps;  // Delay between each step
+        const int stepSize = length / (steps / 2);  // Size of each step
+
+        // Move cursor up
+        for (int i = 0; i < steps / 2; i++) {
+            bleMouse.move(0, -stepSize);
+            delay(delayPerStep);
+        }
+
+        // Move cursor down
+        for (int i = 0; i < steps / 2; i++) {
+            bleMouse.move(0, stepSize);
+            delay(delayPerStep);
+        }
+    }
 }
 
 void loop()
@@ -84,9 +103,9 @@ void loop()
         potValueX = static_cast<int>(round(static_cast<double>(potValueX) / numberOfPotSamples));
         potValueY = static_cast<int>(round(static_cast<double>(potValueY) / numberOfPotSamples));
         // Map analog reading from 0 ~ 4095 to 32737 ~ 0 for use as an axis reading
-        int offSet = 1000;
-        int deadZone = 3000;
-        int reductionFactor = 900;
+        int offSet = 2000;
+        int deadZone = 6000;
+        int reductionFactor = 700;
         int maxValue = 32737;
 
         // Map analog reading from 0 ~ 4095 to 32737 ~ 0 for use as an axis reading
@@ -140,7 +159,7 @@ void loop()
                 bleMouse.move(0, 0, -moveY / abs(moveY));
             }
 */
-            bleMouse.move(0, 0, round(moveY / 7), round(moveX / 7));
+            bleMouse.move(0, 0, round(moveY / 20), round(moveX / 20));
 
             if (analogRead(button1Pin) > 3000) {
                 Serial.println("MOUSE_RIGHT");
@@ -153,7 +172,8 @@ void loop()
         if (analogRead(button2Pin) > 3000) {
             currentModeIndex = getNextMode();
             Serial.println("Button 2 pressed : Mode set to " + String(currentModeIndex));
-            handDrawNumberTwo();handDrawNumberTwo();handDrawNumberTwo();
+            
+            animateCursor(currentModeIndex);
         }
 
         // Debug
