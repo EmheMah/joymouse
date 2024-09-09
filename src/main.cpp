@@ -28,16 +28,16 @@ const int delayBetweenHIDReports = 30; // Additional delay in milliseconds betwe
 const String MODES[] = {F("MOUSE"), F("READING")};
 int currentModeIndex = 0;
 
-int getNextMode()
-{
+bool leftButtonPressed = false;
+
+int getNextMode() {
     int size = sizeof(MODES) / sizeof(MODES[0]);
     String currentMode = MODES[currentModeIndex];
     currentModeIndex = (currentModeIndex + 1) % size;
     return currentModeIndex;
 }
 
-void setup()
-{
+void setup() {
     Serial.begin(9600);
     bleMouse.begin();
 }
@@ -78,19 +78,16 @@ void animateCursor(int mode) {
     }
 }
 
-void loop()
-{
+void loop() {
 
-    if (bleMouse.isConnected())
-    {
+    if (bleMouse.isConnected()) {
         int potValuesX[numberOfPotSamples]; // Array to store pot readings
         int potValueX = 0;                  // Variable to store calculated pot reading average
         int potValuesY[numberOfPotSamples]; // Array to store pot readings
         int potValueY = 0;                  // Variable to store calculated pot reading average
 
         // Populate readings
-        for (int i = 0; i < numberOfPotSamples; i++)
-        {
+        for (int i = 0; i < numberOfPotSamples; i++) {
             potValuesX[i] = analogRead(potPinX);
             potValueX += potValuesX[i];
             potValuesY[i] = analogRead(potPinY);
@@ -111,16 +108,14 @@ void loop()
         // Map analog reading from 0 ~ 4095 to 32737 ~ 0 for use as an axis reading
         int adjustedValueX = map(potValueX, 0, 4095, maxValue, 0) - offSet;
         int moveX = int(maxValue / 2 - adjustedValueX);
-        if (abs(moveX) < deadZone)
-        {
+        if (abs(moveX) < deadZone) {
             moveX = 0;
         }
         moveX = moveX / reductionFactor;
 
         int adjustedValueY = map(potValueY, 0, 4095, maxValue, 0) - offSet;
         int moveY = int(maxValue / 2 - adjustedValueY);
-        if (abs(moveY) < deadZone)
-        {
+        if (abs(moveY) < deadZone) {
             moveY = 0;
         }
         moveY = moveY / reductionFactor;
@@ -133,9 +128,24 @@ void loop()
         if (currentModeIndex == 0 ) {
             bleMouse.move(-moveX, -moveY, 0);
             if (analogRead(button1Pin) > 3000) {
-                Serial.println("MOUSE_LEFT");
-                bleMouse.click(MOUSE_LEFT);
-                delay(500);
+                delay(100);
+                // Après 100ms si le bouton est encore enfoncé on faire PRESS
+                if (analogRead(button1Pin) > 3000) {
+                    // PRESS
+                    leftButtonPressed = true;
+                    Serial.println("MOUSE_LEFT PRESS");
+                    bleMouse.press(MOUSE_LEFT);
+                } else {
+                    // CLICK
+                    Serial.println("MOUSE_LEFT CLICK");
+                    bleMouse.click(MOUSE_LEFT);
+                    leftButtonPressed = false;
+                    delay(500);
+                }
+            } else if (leftButtonPressed) {
+                // RELEASE
+                leftButtonPressed = false;
+                bleMouse.release(MOUSE_LEFT);
             }
         } else if (currentModeIndex == 1 ) {
             // Joystick
@@ -165,27 +175,25 @@ void loop()
                 Serial.println("MOUSE_RIGHT");
                 bleMouse.click(MOUSE_RIGHT);
                 delay(500);
+                if (analogRead(button1Pin) > 3000) {
+                    bleMouse.press(MOUSE_RIGHT);
+                }
+            } else {
+                Serial.println("MOUSE_RIGHT");
+                bleMouse.release(MOUSE_RIGHT);
             }
-        }
+
+            }
+
 
         // Button 2 changes mode
         if (analogRead(button2Pin) > 3000) {
             currentModeIndex = getNextMode();
             Serial.println("Button 2 pressed : Mode set to " + String(currentModeIndex));
-            
             animateCursor(currentModeIndex);
         }
-
-        // Debug
-        if (moveX != 0 || moveY != 0) {
-            Serial.println("adjustedValueX : " + String(adjustedValueX) + " moveX : " + String(moveX));
-            Serial.println("adjustedValueY : " + String(adjustedValueY) + " moveY : " + String(moveY));
-        }
-        /*
-        Serial.println("button 1 : " + String(button1Value));
-        Serial.println("button 2 : " + String(button2Value));
-        */
-
         delay(delayBetweenHIDReports); // bluetooth stack will go into congestion, if too many packets are sent
     }
+
 }
+
